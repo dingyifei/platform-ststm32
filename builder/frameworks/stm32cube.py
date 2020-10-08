@@ -38,7 +38,7 @@ env = DefaultEnvironment()
 platform = env.PioPlatform()
 board = env.BoardConfig()
 
-PROJECT_DIR = env.subst("$PROJECT_DIR")
+PROJECT_DIR = "$PROJECT_DIR"
 FRAMEWORK_DIR = platform.get_package_dir("framework-stm32cube")
 assert isdir(FRAMEWORK_DIR)
 
@@ -269,25 +269,46 @@ for component in listdir(components_dir):
 
 libs = []
 
-bsp_dir = join(FRAMEWORK_DIR, FRAMEWORK_CORE, "Drivers", "BSP", variant)
-if isdir(bsp_dir):
-    libs.append(env.BuildLibrary(join("$BUILD_DIR", "FrameworkBSP"), bsp_dir))
-    env.Append(CPPPATH=[bsp_dir])
+if not isdir(join(PROJECT_DIR, "Drivers")):  # Project built in drivers not available
 
-libs.append(env.BuildLibrary(
-    join("$BUILD_DIR", "FrameworkHALDriver"),
-    join(FRAMEWORK_DIR, FRAMEWORK_CORE, "Drivers",
-         MCU_FAMILY.upper() + "xx_HAL_Driver"),
-    src_filter="+<*> -<Src/*_template.c> -<Src/Legacy>"
-))
+    bsp_dir = join(FRAMEWORK_DIR, FRAMEWORK_CORE, "Drivers", "BSP", variant)
+    if isdir(bsp_dir):
+        libs.append(env.BuildLibrary(join("$BUILD_DIR", "FrameworkBSP"), bsp_dir))
+        env.Append(CPPPATH=[bsp_dir])
 
-libs.append(env.BuildLibrary(
-    join("$BUILD_DIR", "FrameworkCMSISDevice"),
-    join(FRAMEWORK_DIR, FRAMEWORK_CORE, "Drivers", "CMSIS", "Device", "ST",
-         MCU_FAMILY.upper() + "xx", "Source", "Templates"),
-    src_filter="-<*> +<*.c> +<gcc/%s>" % get_startup_file(
-        board.get("build.mcu"))
-))
 
+    libs.append(env.BuildLibrary(
+        join("$BUILD_DIR", "FrameworkHALDriver"),
+        join(FRAMEWORK_DIR, FRAMEWORK_CORE, "Drivers",
+             MCU_FAMILY.upper() + "xx_HAL_Driver"),
+        src_filter="+<*> -<Src/*_template.c> -<Src/Legacy>"
+    ))
+
+    libs.append(env.BuildLibrary(
+        join("$BUILD_DIR", "FrameworkCMSISDevice"),
+        join(FRAMEWORK_DIR, FRAMEWORK_CORE, "Drivers", "CMSIS", "Device", "ST",
+             MCU_FAMILY.upper() + "xx", "Source", "Templates"),
+        src_filter="-<*> +<*.c> +<gcc/%s>" % get_startup_file(
+            board.get("build.mcu"))
+    ))
+else:  # Use project built in drivers
+    bsp_dir = join(PROJECT_DIR, "Drivers", "BSP", variant)
+    if isdir(bsp_dir):
+        libs.append(env.BuildLibrary(join("$BUILD_DIR", "FrameworkBSP"), bsp_dir))
+        env.Append(CPPPATH=[bsp_dir])
+
+    libs.append(env.BuildLibrary(
+        join("$BUILD_DIR", "FrameworkHALDriver"),
+        join(PROJECT_DIR, "Drivers", MCU_FAMILY.upper() + "xx_HAL_Driver"),
+        src_filter="+<*> -<Src/*_template.c> -<Src/Legacy>"
+    ))
+
+    libs.append(env.BuildLibrary(
+        join("$BUILD_DIR", "FrameworkCMSISDevice"),
+        join(PROJECT_DIR, "Drivers", "CMSIS", "Device", "ST",
+             MCU_FAMILY.upper() + "xx", "Source", "Templates"),
+        src_filter="-<*> +<*.c> +<gcc/%s>" % get_startup_file(
+            board.get("build.mcu"))
+    ))
 
 env.Append(LIBS=libs)
