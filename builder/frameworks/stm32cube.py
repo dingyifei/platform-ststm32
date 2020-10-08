@@ -38,6 +38,7 @@ env = DefaultEnvironment()
 platform = env.PioPlatform()
 board = env.BoardConfig()
 
+PROJECT_DIR = env.subst("$PROJECT_DIR")
 FRAMEWORK_DIR = platform.get_package_dir("framework-stm32cube")
 assert isdir(FRAMEWORK_DIR)
 
@@ -142,6 +143,12 @@ def get_linker_script(mcu):
 def generate_hal_config_file(mcu):
     config_path = join(FRAMEWORK_DIR, FRAMEWORK_CORE, "Drivers",
                        MCU_FAMILY.upper() + "xx_HAL_Driver", "Inc")
+
+    # Use xx_hal_conf.h existed in the project
+    if isfile(join(PROJECT_DIR, "Inc", "xx_hal_conf.h")):
+        copy(join(PROJECT_DIR, "Inc", "xx_hal_conf.h"),
+             join(config_path, MCU_FAMILY + "xx_hal_conf.h"))
+        return
 
     if isfile(join(config_path, MCU_FAMILY + "xx_hal_conf.h")):
         return
